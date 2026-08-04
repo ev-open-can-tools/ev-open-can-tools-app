@@ -57,6 +57,11 @@ class EvCanBleClient(private val context: Context) : BleTransport {
 
     private val tag = "EvCanBleClient"
 
+    private companion object {
+        const val CONNECT_TIMEOUT_MS = 15_000L
+        const val PREPARE_TIMEOUT_MS = 20_000L
+    }
+
     private val adapter: BluetoothAdapter? =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
@@ -84,7 +89,10 @@ class EvCanBleClient(private val context: Context) : BleTransport {
     private var scanCallback: ScanCallback? = null
 
     /** Scan for the first EV-CAN-Tool, connect, bond, and prepare its GATT. */
-    suspend fun connect(timeoutMs: Long = 30_000) {
+    suspend fun connect(
+        scanTimeoutMs: Long = 30_000,
+        bondTimeoutMs: Long = 120_000,
+    ) {
         val adapter = adapter ?: run {
             fail("Bluetooth not available")
             return
@@ -94,13 +102,15 @@ class EvCanBleClient(private val context: Context) : BleTransport {
             return
         }
         try {
-            withTimeout(timeoutMs) {
-                val device = scanForDevice()
-                connectGatt(device)
-                ensureBonded(device)
-                requestMtu()
-                discoverServices()
-            }
+            // Each phase gets its own timeout. Critically, bonding is NOT bounded
+            // by the short scan/connect budget: the user is typing the passkey
+            // into the system dialog, and a single overall timeout was tearing
+            // the link down mid-entry (dialog vanished, "wrong passkey").
+            val device = withTimeout(scanTimeoutMs) { scanForDevice() }
+            withTimeout(CONNECT_TIMEOUT_MS) { connectGatt(device) }
+            ensureBonded(device, bondTimeoutMs)
+            withTimeout(PREPARE_TIMEOUT_MS) { requestMtu() }
+            withTimeout(PREPARE_TIMEOUT_MS) { discoverServices() }
             _state.value = ConnectionState.Ready
         } catch (e: TimeoutCancellationException) {
             fail("Timed out while connecting")
@@ -150,7 +160,7 @@ class EvCanBleClient(private val context: Context) : BleTransport {
         deferred.await()
     }
 
-    private suspend fun ensureBonded(device: BluetoothDevice) {
+    private suspend fun ensureBonded(device: BluetoothDevice, timeoutMs: Long) {
         if (device.bondState == BluetoothDevice.BOND_BONDED) return
         _state.value = ConnectionState.Pairing
         val deferred = CompletableDeferred<Unit>()
@@ -161,7 +171,10 @@ class EvCanBleClient(private val context: Context) : BleTransport {
             if (device.bondState != BluetoothDevice.BOND_BONDING) {
                 device.createBond()
             }
-            deferred.await()
+            // Generous window: the user is reading the passkey off the dashboard
+            // and typing it into the system dialog. The BLE stack enforces its own
+            // ~30s SMP timeout per attempt; we simply must not give up sooner.
+            withTimeout(timeoutMs) { deferred.await() }
         } finally {
             runCatching { context.unregisterReceiver(bondReceiver) }
         }
