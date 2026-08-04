@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme used until Compose draws. Compose (Material 3) drives the
+         actual UI theming; a platform parent avoids extra dependencies. The
+         dark counterpart lives in values-night/themes.xml. -->
+    <style name="Theme.EvCanTools" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

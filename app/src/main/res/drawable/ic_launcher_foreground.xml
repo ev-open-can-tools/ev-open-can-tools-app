@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 108x108 adaptive foreground; artwork kept within the ~66dp center safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Lightning bolt (EV) -->
+    <path
+        android:fillColor="#66BB6A"
+        android:pathData="M58,26 L40,58 L52,58 L48,82 L70,48 L57,48 Z" />
+    <!-- CAN bus dots -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,44 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,64 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+</vector>
