@@ -19,6 +19,19 @@ android {
         versionName = "0.1.1"
     }
 
+    // Committed debug keystore so every CI build is signed with the same key —
+    // sideloaded updates install cleanly instead of being rejected for a
+    // signature mismatch. This is a throwaway debug key (password "android"),
+    // never used for release signing.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

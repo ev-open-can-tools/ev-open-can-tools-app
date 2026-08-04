@@ -11,10 +11,13 @@ local.properties
 captures/
 .cxx/
 
-# Signing / secrets — never commit
+# Signing / secrets — never commit release keys.
 *.jks
 *.keystore
 keystore.properties
+# ...except the throwaway DEBUG keystore, committed so CI builds share one key
+# and sideloaded updates install cleanly.
+!app/debug.keystore
 
 # OS
 .DS_Store
