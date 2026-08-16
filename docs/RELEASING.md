@@ -48,6 +48,9 @@ The release key is never committed. `.gitignore` blocks `*.keystore` and `*.jks`
 
 ## One-time setup
 
+Do this once. Everything below runs in **your own terminal** — the passwords must
+not pass through anyone else's hands, including a shell someone else is driving.
+
 ### 1. Create the release keystore
 
 Do this even if an older key was registered at some point: adding a new key to an
@@ -55,50 +58,95 @@ existing package name is supported, and it is far less trouble than hunting down
 a keystore whose whereabouts are unclear. A key you cannot locate is a key you
 cannot ship with.
 
-Run this yourself — choose and keep the passwords, they must not be shared:
+Keep it **outside the repository**. `.gitignore` would stop it being committed,
+but a `git clean -xdf` deletes ignored files too, and that would be unrecoverable:
 
 ```bash
-keytool -genkeypair -v \
-  -keystore release.keystore \
+mkdir -p ~/keys && chmod 700 ~/keys
+
+~/.jdks/jdk-21.0.12+8/bin/keytool -genkeypair -v \
+  -keystore ~/keys/evcan-release.keystore \
+  -storetype PKCS12 \
   -alias evcan-release \
   -keyalg RSA -keysize 4096 -validity 10000 \
   -dname "CN=ev-open-can-tools, O=ev-open-can-tools, C=DE"
 ```
 
-Read its fingerprint — this is the value you register in step 2 and note in the
-table above:
+`keytool` prompts for the password. **Do not** pass `-storepass` on the command
+line — it would be written to your shell history in plain text.
+
+PKCS12 uses one password for both the store and the key, so `EVCAN_KEY_PASSWORD`
+and `EVCAN_KEYSTORE_PASSWORD` below are the same value.
+
+Lock the file down and read its fingerprint:
 
 ```bash
-keytool -list -v -keystore release.keystore -alias evcan-release | grep -A1 SHA256
+chmod 600 ~/keys/evcan-release.keystore
+
+~/.jdks/jdk-21.0.12+8/bin/keytool -list -v \
+  -keystore ~/keys/evcan-release.keystore \
+  -alias evcan-release | grep -A1 SHA256
 ```
 
-**Back this file up somewhere safe.** Losing it means losing the ability to ship
-updates that install over existing ones — there is no recovery.
+**Back up the file and the password now**, before going further — a password
+manager entry with the keystore attached is the right home for both. Losing
+either means losing the ability to ship an update that installs over an existing
+version. There is no recovery path; the only remedy is a new package name.
 
-### 2. Register it with Google
+### 2. Register the key with Google
 
 In the Play / Android Developer Console, open the registration for
-`org.ev_open_can_tools.ev_can_app` and **Add key** with this keystore's SHA-256
-fingerprint. If a key from an earlier attempt is already listed, leave it — a
-package name may hold several, and the one you sign with is what counts.
+`org.ev_open_can_tools.ev_can_app` and choose **Add key**, using the SHA-256 from
+the previous step. If a key from an earlier attempt is already listed, leave it —
+a package name may hold several, and the one you actually sign with is what
+counts.
 
-Adding a key to a package name you already own means proving control of it by
-uploading an APK signed with the new key, which the release workflow below
-produces.
+Proving control of an already-registered package name means uploading an APK
+signed with the new key. The release workflow produces exactly that, so it is
+fine to do step 4 first and take the APK from the resulting GitHub Release.
 
-This step needs a Google account and a government-issued ID; it cannot be
+This step needs a Google account and a government-issued ID. It cannot be
 automated.
 
-### 3. Add the GitHub secrets
+### 3. Store the key in GitHub
 
-*Settings → Secrets and variables → Actions*:
+Four repository secrets. Run these in your own terminal, from the repo:
 
-| Secret | Value |
-|---|---|
-| `EVCAN_KEYSTORE_BASE64` | output of `base64 -w0 release.keystore` |
-| `EVCAN_KEYSTORE_PASSWORD` | keystore password |
-| `EVCAN_KEY_ALIAS` | `evcan-release` |
-| `EVCAN_KEY_PASSWORD` | key password |
+```bash
+cd /home/alex/Games/claude/ev-open-can-tools-app
+
+# The keystore itself, base64-encoded, straight from the file — never printed.
+base64 -w0 ~/keys/evcan-release.keystore | gh secret set EVCAN_KEYSTORE_BASE64
+
+# The alias is not secret, but keeping it here means the workflow needs no edit.
+printf 'evcan-release' | gh secret set EVCAN_KEY_ALIAS
+
+# These two prompt for the password; nothing lands in your shell history.
+gh secret set EVCAN_KEYSTORE_PASSWORD
+gh secret set EVCAN_KEY_PASSWORD
+```
+
+Prefer the web UI? *Settings → Secrets and variables → Actions → New repository
+secret*, same four names. For the base64 value, generate it with
+`base64 -w0 ~/keys/evcan-release.keystore` and paste the output.
+
+Confirm all four exist:
+
+```bash
+gh secret list
+```
+
+GitHub stores secrets encrypted and will not show them again, so they survive
+indefinitely — but they are also not a backup. Keep step 1's copy.
+
+Secrets are not exposed to workflows triggered by pull requests from forks, which
+is fine here: releases are cut from tags on this repository.
+
+### 4. Cut the first release
+
+See below. Afterwards, check the workflow's job summary: it prints the package
+name and certificate fingerprint of the APK it just built. Both must match what
+you registered.
 
 ## Cutting a release
 
@@ -129,7 +177,18 @@ apksigner verify --print-certs ev-can-tools-v0.2.0-beta.1.apk
 aapt2 dump packagename ev-can-tools-v0.2.0-beta.1.apk
 ```
 
-The printed SHA-256 and package name must match the table at the top.
+The printed SHA-256 and package name must match what you registered.
+
+**Note the formatting difference:** `keytool` prints the fingerprint as
+colon-separated uppercase (`2F:F0:34:…`), `apksigner` as unbroken lowercase
+(`2ff034…`). Same value. To compare them directly:
+
+```bash
+apksigner verify --print-certs app.apk \\
+  | grep -i 'SHA-256 digest' \\
+  | tr -d ' ' | cut -d: -f2 \\
+  | sed 's/../&:/g;s/:$//' | tr 'a-f' 'A-F'
+```
 
 ## Sources
 
