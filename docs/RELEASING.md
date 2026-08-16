@@ -9,13 +9,23 @@ and goes global from 2027.
 Being covered by that verification comes down to two values matching what is
 registered in the Android Developer Console:
 
-| | Value |
-|---|---|
-| `applicationId` | `org.ev_open_can_tools.ev_can_app` |
-| Release key SHA-256 | `2F:F0:34:E7:67:F2:6A:DC:D9:7C:34:A3:B1:DE:73:55:4C:3C:2D:B7:BA:64:D1:C2:D9:69:B8:DE:F3:F6:BD:3A` |
+- **`applicationId`** — `org.ev_open_can_tools.ev_can_app`, set in
+  `app/build.gradle.kts`. This is fixed; changing it would mean re-registering
+  and would look like a different app to every device.
+- **The release key's SHA-256** — whichever key you registered. A package name
+  can hold **several** keys and further ones can be added at any time, so there
+  is no need to track down an old key: generate a fresh keystore and add its
+  fingerprint in the console.
 
-If either differs, the APK is not covered and certified devices will refuse it
-once enforcement reaches them.
+If the APK's package name and signing key are not both registered, it is not
+covered, and certified devices will refuse it once enforcement reaches them.
+
+Record the fingerprint you actually ship with here once it is registered, so a
+published APK can be checked against something written down:
+
+| Key | SHA-256 | Registered |
+|---|---|---|
+| _(fill in after step 1)_ | | |
 
 > The Kotlin/R namespace is still `com.evcantools.app`. That is deliberate — only
 > the `applicationId` is the app's identity; renaming every source package would
@@ -30,14 +40,20 @@ rejected for a signature mismatch.
 
 **It must never be the release key.** It is public — anyone who clones the repo
 could sign an APK that appears to come from this developer. Its fingerprint is
-`3B:C9:71:20:…`, which is *not* the registered one.
+`3B:C9:71:20:15:5B:C3:E4:AC:D8:6D:BB:1E:21:35:57:7F:0B:68:9C:FE:10:D6:74:24:43:BC:A3:1C:C9:DD:6A`
+— never register that one.
 
 The release key is never committed. `.gitignore` blocks `*.keystore` and `*.jks`
 (with an exception for the debug one), and CI materialises it from a secret.
 
 ## One-time setup
 
-### 1. Create the release keystore (if you do not have one yet)
+### 1. Create the release keystore
+
+Do this even if an older key was registered at some point: adding a new key to an
+existing package name is supported, and it is far less trouble than hunting down
+a keystore whose whereabouts are unclear. A key you cannot locate is a key you
+cannot ship with.
 
 Run this yourself — choose and keep the passwords, they must not be shared:
 
@@ -49,7 +65,8 @@ keytool -genkeypair -v \
   -dname "CN=ev-open-can-tools, O=ev-open-can-tools, C=DE"
 ```
 
-Read its fingerprint and confirm it is the registered one:
+Read its fingerprint — this is the value you register in step 2 and note in the
+table above:
 
 ```bash
 keytool -list -v -keystore release.keystore -alias evcan-release | grep -A1 SHA256
@@ -60,9 +77,14 @@ updates that install over existing ones — there is no recovery.
 
 ### 2. Register it with Google
 
-In the Android Developer Console, register the package name
-`org.ev_open_can_tools.ev_can_app` and add this key's SHA-256 fingerprint. A
-package name can hold several keys, and further keys can be added later.
+In the Play / Android Developer Console, open the registration for
+`org.ev_open_can_tools.ev_can_app` and **Add key** with this keystore's SHA-256
+fingerprint. If a key from an earlier attempt is already listed, leave it — a
+package name may hold several, and the one you sign with is what counts.
+
+Adding a key to a package name you already own means proving control of it by
+uploading an APK signed with the new key, which the release workflow below
+produces.
 
 This step needs a Google account and a government-issued ID; it cannot be
 automated.

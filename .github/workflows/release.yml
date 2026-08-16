@@ -1,10 +1,11 @@
 name: Release APK
 
 # Builds a release-signed APK and publishes it as a GitHub Release, so users can
-# download it directly. The signing key must be the one registered for Android
+# download it directly. The signing key must be one registered for Android
 # developer verification against this app's applicationId — otherwise the APK is
 # not covered by the registration and certified devices will refuse it once
-# enforcement starts.
+# enforcement starts. A package name can hold several registered keys; what
+# matters is that the key used here is one of them.
 #
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   EVCAN_KEYSTORE_BASE64   base64 of the release keystore file
@@ -109,7 +110,7 @@ jobs:
             sha256sum -c ev-can-tools-${{ github.ref_name }}.apk.sha256
             ```
 
-            The APK is signed with the key registered for Android developer
+            The APK is signed with a key registered for Android developer
             verification against `org.ev_open_can_tools.ev_can_app`. Check it with:
 
             ```
