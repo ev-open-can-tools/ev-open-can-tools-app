@@ -93,9 +93,15 @@ jobs:
           sha256sum "$NAME" > "$NAME.sha256"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release
+      # Created as a draft, then published in the next step. This repository has
+      # immutable releases enabled, which forbids attaching assets to an already
+      # published release -- and a prerelease publishes on creation, so uploading
+      # the APK straight into it fails. Draft first, attach, then publish.
+      - name: Draft GitHub Release with the APK attached
+        id: release
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           files: |
             ${{ steps.artifact.outputs.name }}
             ${{ steps.artifact.outputs.name }}.sha256
@@ -118,3 +124,8 @@ jobs:
             ```
 
             Requires firmware `4.0.0-beta.2` or newer for the button grid to work.
+
+      - name: Publish the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
