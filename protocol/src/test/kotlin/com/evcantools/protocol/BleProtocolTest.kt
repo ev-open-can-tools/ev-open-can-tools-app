@@ -18,20 +18,34 @@ private class FakeFirmware(private val dispatch: (String) -> String) : BleTransp
     private var response: ByteArray = "{}".toByteArray(Charsets.UTF_8)
     private var cursor: Int = 0
 
+    /** Mirrors `bleCmdBuf`: writes accumulate, dispatch happens on the newline. */
+    private val accumulator = StringBuilder()
+
     val commands = mutableListOf<String>()
+    var writes: Int = 0
+        private set
     var reads: Int = 0
         private set
 
     override suspend fun writeCommand(bytes: ByteArray) {
-        // Command char is newline-framed; a single write here carries one line.
-        val line = String(bytes, Charsets.UTF_8).trimEnd('\n', '\r')
-        commands += line
-        if (line == BleCommands.NEXT) {
-            val total = response.size
-            cursor = if (cursor + READ_PAGE_BYTES < total) cursor + READ_PAGE_BYTES else total
-        } else {
-            response = dispatch(line).toByteArray(Charsets.UTF_8)
-            cursor = 0
+        writes++
+        // The device rejects any single write that overflows its flat buffer.
+        check(bytes.size <= 255) { "write of ${bytes.size} bytes exceeds the firmware's 255-byte limit" }
+        accumulator.append(String(bytes, Charsets.UTF_8))
+        while (true) {
+            val nl = accumulator.indexOf("\n")
+            if (nl < 0) break
+            val line = accumulator.substring(0, nl).trimEnd('\r')
+            accumulator.delete(0, nl + 1)
+            if (line.isEmpty()) continue
+            commands += line
+            if (line == BleCommands.NEXT) {
+                val total = response.size
+                cursor = if (cursor + READ_PAGE_BYTES < total) cursor + READ_PAGE_BYTES else total
+            } else {
+                response = dispatch(line).toByteArray(Charsets.UTF_8)
+                cursor = 0
+            }
         }
     }
 
@@ -129,6 +143,34 @@ class BleProtocolTest {
         val ping = parsePing(fw.request(BleCommands.PING))
         assertTrue(ping.ok)
         assertTrue(ping.pong)
+    }
+
+    @Test
+    fun shortCommandTakesASingleWrite() = runBlocking {
+        val fw = FakeFirmware { "{\"ok\":true,\"pong\":true}" }
+        fw.request(BleCommands.PING)
+        assertEquals(1, fw.writes)
+    }
+
+    @Test
+    fun longSendCommandIsSplitIntoWritesTheDeviceAccepts() = runBlocking {
+        val frames = List(MAX_SEND_FRAMES) { i ->
+            CanFrameSpec(id = 0x100 + i, data = ByteArray(8) { b -> (i + b).toByte() })
+        }
+        val payload = buildSendCommand(frames)
+        assertTrue(
+            payload.length > MAX_COMMAND_WRITE_BYTES,
+            "a full burst should need splitting, but is only ${payload.length} bytes",
+        )
+
+        // FakeFirmware asserts the 255-byte per-write cap and reassembles on '\n',
+        // exactly as bleCmdWriteCb does.
+        val fw = FakeFirmware { "{\"ok\":true,\"sent\":${frames.size}}" }
+        val ack = parseAck(fw.request(payload))
+
+        assertEquals(listOf(payload), fw.commands, "device must see one command, byte-identical")
+        assertTrue(fw.writes > 1, "long command should span several writes, took ${fw.writes}")
+        assertEquals(frames.size, ack.sent)
     }
 
     @Test

@@ -42,14 +42,32 @@ data class PingReply(
     val pong: Boolean = false,
 )
 
-/** Generic ack, e.g. `{"ok":true,"reboot":true}` or an error `{"ok":false,"error":"..."}`. */
+/**
+ * Generic ack, e.g. `{"ok":true,"reboot":true}`, `{"ok":true,"sent":2}`, or a
+ * rejection `{"ok":false,"error":"gated","reason":"injection disabled"}`.
+ *
+ * [reason] explains an `error` ("which safety gate was closed", "what is wrong
+ * with the frame"); [index] points at the offending frame of a `send` burst.
+ */
 @Serializable
 data class Ack(
     val ok: Boolean = false,
     val reboot: Boolean = false,
     val sent: Int? = null,
     val error: String? = null,
-)
+    val reason: String? = null,
+    val index: Int? = null,
+) {
+    /** One line fit to show the user, or null when the command succeeded. */
+    val failureText: String?
+        get() {
+            if (ok) return null
+            val head = error ?: "Rejected"
+            val detail = reason?.let { " — $it" } ?: ""
+            val where = index?.let { " (frame ${it + 1})" } ?: ""
+            return head + detail + where
+        }
+}
 
 fun parseStatus(json: String): StatusReply = BleJson.decodeFromString(StatusReply.serializer(), json)
 fun parsePing(json: String): PingReply = BleJson.decodeFromString(PingReply.serializer(), json)

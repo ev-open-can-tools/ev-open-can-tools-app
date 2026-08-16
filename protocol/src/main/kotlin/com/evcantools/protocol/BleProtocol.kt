@@ -37,6 +37,17 @@ const val READ_PAGE_BYTES = 400
 /** Header prefixing every Response READ: total reply length + this page's offset. */
 const val PAGE_HEADER_BYTES = 8
 
+/**
+ * Largest single write to the Command characteristic.
+ *
+ * The firmware flattens one ATT write into a 256-byte stack buffer and rejects
+ * anything longer outright, so a long command (a multi-frame `send`) must be
+ * split. That is safe because the firmware appends every write to an accumulator
+ * and only dispatches on the newline — splitting is purely a client concern.
+ * 180 keeps a chunk inside one ATT packet at the negotiated MTU of 247.
+ */
+const val MAX_COMMAND_WRITE_BYTES = 180
+
 /** Canonical command payloads (without the trailing newline). */
 object BleCommands {
     const val STATUS = "{\"cmd\":\"status\"}"
@@ -47,6 +58,18 @@ object BleCommands {
 
 /** Frame a command payload for the Command characteristic (append newline, UTF-8). */
 fun frameCommand(payload: String): ByteArray = (payload + "\n").toByteArray(Charsets.UTF_8)
+
+/**
+ * Frame [payload] and split it into writes of at most [MAX_COMMAND_WRITE_BYTES].
+ * The device reassembles them, so only the last chunk carries the newline that
+ * triggers dispatch.
+ */
+fun frameCommandChunks(payload: String): List<ByteArray> {
+    val framed = frameCommand(payload)
+    if (framed.size <= MAX_COMMAND_WRITE_BYTES) return listOf(framed)
+    return framed.asList()
+        .chunked(MAX_COMMAND_WRITE_BYTES) { it.toByteArray() }
+}
 
 /** Parsed 8-byte page header from a Response READ. */
 data class PageHeader(val total: Long, val offset: Long)
@@ -120,7 +143,7 @@ interface BleTransport {
  * @return the reply JSON as a string.
  */
 suspend fun BleTransport.request(payload: String): String {
-    writeCommand(frameCommand(payload))
+    frameCommandChunks(payload).forEach { writeCommand(it) }
     val assembler = ResponseAssembler()
     while (true) {
         val page = readResponsePage()
