@@ -160,9 +160,15 @@ you registered.
 3. Tag and push:
 
 ```bash
-git tag v0.2.0-beta.1
-git push origin v0.2.0-beta.1
+git tag v0.2.0-beta.3
+git push origin v0.2.0-beta.3
 ```
+
+**A tag name is single-use.** This repository has immutable releases enabled, so
+once a tag has carried a release, that name can never be created again — deleting
+the release does not free it, and a retry pushes back with
+`Cannot create ref due to creations being restricted`. If a release run fails,
+fix it and bump to the next version rather than reusing the tag.
 
 `.github/workflows/release.yml` then runs the protocol tests, builds a
 release-signed APK, prints the package name and certificate fingerprint into the

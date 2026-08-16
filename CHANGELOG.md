@@ -14,7 +14,7 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 No unreleased changes.
 
-## [0.2.0-beta.2] - 2026-08-16
+## [0.2.0-beta.3] - 2026-08-16
 
 ### Changed
 
@@ -73,8 +73,8 @@ First release that can actually control the device rather than only read from it
 - Two-module split: `:protocol` is plain Kotlin/JVM (framing, paging, reply types) and unit-testable without an Android SDK; `:app` is Compose/Material 3. The build configures `:protocol` alone when no SDK is present.
 - GitHub Actions CI: protocol tests plus a debug APK uploaded as an artifact.
 
-[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.2...HEAD
-[0.2.0-beta.2]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.2
+[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.3...HEAD
+[0.2.0-beta.3]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.3
 [0.2.0-beta.1]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.1
 [0.1.1]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.1.0

@@ -22,7 +22,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 4
-        versionName = "0.2.0-beta.2"
+        versionName = "0.2.0-beta.3"
     }
 
     // Committed debug keystore so every CI build is signed with the same key —
