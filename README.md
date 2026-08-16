@@ -5,10 +5,12 @@ ESP32 firmware. It talks to the device over **Bluetooth LE**, mirroring the WiFi
 web dashboard, with an encrypted + passkey-paired link so only the phone that
 paired can control the device.
 
-> Status: **P1 — button grid.** On top of the P0 foundation (BLE connect, passkey
-> pairing, paged transport) the app now stores CAN-frame buttons on the phone and
-> injects them with one tap via the firmware's `send` command. Import/export,
-> icons/themes and the settings page follow (see the roadmap).
+> Status: **v0.2.0-beta.1 — P1, button grid.** On top of the P0 foundation (BLE
+> connect, passkey pairing, paged transport) the app now stores CAN-frame buttons
+> on the phone and injects them with one tap via the firmware's `send` command,
+> and can flip the device's injection switch itself. Import/export, icons/themes
+> and the settings page follow (see the roadmap). Every release is a beta until
+> the roadmap is through — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Modules
 
