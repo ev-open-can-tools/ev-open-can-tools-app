@@ -21,8 +21,8 @@ android {
         applicationId = "org.ev_open_can_tools.ev_can_app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.0-beta.1"
+        versionCode = 4
+        versionName = "0.2.0-beta.2"
     }
 
     // Committed debug keystore so every CI build is signed with the same key —
