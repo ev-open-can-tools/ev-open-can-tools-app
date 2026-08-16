@@ -21,6 +21,10 @@ No unreleased changes.
 - **A lost GATT callback no longer freezes the app.** Reads and writes had no timeout — only connecting did — so a device that rebooted mid-request, or a stale handle after a reconnect, left the caller suspended forever. The UI then sat at "Working…" with every control disabled and no way out but force-closing it. Operations now give up after 10 seconds and report it, which is far longer than a round trip needs.
 - **Disconnect always unsticks the app.** It now fails anything in flight itself, instead of relying on the disconnect callback — which never arrives on an already-dead link, exactly when Disconnect is the one control still enabled.
 
+### Verified
+
+- On device: the dashboard's new BLE card switches the device into BLE mode, the app connects, and the UI no longer locks up.
+
 ## [0.2.0-beta.5] - 2026-08-16
 
 ### Added
