@@ -10,7 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.evcantools.app.ui.SmokeScreen
+import com.evcantools.app.ui.MainScreen
 import com.evcantools.app.ui.theme.EvCanTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,7 +26,7 @@ private fun App() {
     EvCanTheme {
         val vm: EvCanViewModel = viewModel()
         Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
-            SmokeScreen(vm, Modifier.padding(padding))
+            MainScreen(vm, Modifier.padding(padding))
         }
     }
 }
