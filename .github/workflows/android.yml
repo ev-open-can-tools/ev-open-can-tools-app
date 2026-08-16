@@ -36,6 +36,11 @@ jobs:
       - name: Protocol unit tests
         run: ./gradlew :protocol:test --stacktrace
 
+      # The button pack import/merge rules. Pure Kotlin, so they run as plain JVM
+      # tests -- but they live in :app, which only configures with an SDK present.
+      - name: App unit tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
       - name: Assemble debug APK
         run: ./gradlew :app:assembleDebug --stacktrace
 

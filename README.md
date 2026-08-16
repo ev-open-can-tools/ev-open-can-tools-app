@@ -82,11 +82,22 @@ apksigner verify --print-certs ev-can-tools-<version>.apk
 The certificate SHA-256 must be
 `26fc837ca9da703af7dd4b8f32e777804a1dc60020705efc5886675b7ee49cad`.
 
+## Button packs
+
+In edit mode you can **Export** your buttons to a JSON file, **Share** them
+straight into any app, or **Import** a pack someone sent you. Files are picked
+through the system document picker, so the app needs no storage permission and
+the pack can land wherever you like — local, Drive, a chat.
+
+On import you choose whether to *add* the buttons alongside yours or *replace*
+everything. Imported buttons always get fresh ids, so importing a pack — even one
+exported from this same phone — can never overwrite a button you already had.
+
 ## Roadmap
 
 - **P0** — foundation: BLE connect/pair + paged transport + status/ping *(done)*
-- **P1** — custom-command **button grid** (tap = send stored CAN frame(s)) + edit mode *(current)*
-- **P2** — import / export / share function packs (backup, new device)
+- **P1** — custom-command **button grid** (tap = send stored CAN frame(s)) + edit mode *(done)*
+- **P2** — import / export / share function packs (backup, new device) *(current)*
 - **P3** — custom icons/images + themes
 - **P4** — settings page mirroring the web config + car stats
 

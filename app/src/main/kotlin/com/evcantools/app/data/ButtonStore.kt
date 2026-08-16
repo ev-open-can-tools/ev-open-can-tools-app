@@ -63,6 +63,9 @@ class ButtonStore(context: Context) {
         persist(_buttons.value.filterNot { it.id == buttonId })
     }
 
+    /** Take the result of an import wholesale. */
+    suspend fun replaceAll(buttons: List<CanButton>) = persist(buttons)
+
     private suspend fun persist(next: List<CanButton>) {
         _buttons.value = next
         withContext(Dispatchers.IO) {

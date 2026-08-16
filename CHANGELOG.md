@@ -12,6 +12,14 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 ## [Unreleased]
 
+### Added
+
+- **P2 — button packs.** Export the buttons to a JSON file, share them into any app, or import a pack. Files go through the Storage Access Framework, so no storage permission is needed and the user picks the destination.
+- On import, a prompt asks whether to *add* the buttons or *replace* the existing set. Imported buttons always receive fresh ids, so importing a pack — including one exported from the same phone — duplicates rather than overwriting. Silently losing a button to an id collision would be unrecoverable.
+- A pack that cannot be parsed, is empty, or was written in a newer format version is refused with a message naming the reason, before the merge choice is offered. Refusing an empty pack matters most in *replace* mode, where accepting it would wipe everything.
+- Buttons whose frames the app cannot send are imported rather than dropped: they show as invalid on the grid and can be repaired, and the import reports how many there were.
+- `:app` now has JVM unit tests (the pack rules are pure Kotlin), wired into CI.
+
 ### Removed
 
 - The release runbook is no longer carried in the repository; it is kept locally instead. It held no secrets — only the public certificate fingerprint and the procedure — so this is a scope decision, not a leak. The fingerprint needed to check a downloaded APK now lives in the README.

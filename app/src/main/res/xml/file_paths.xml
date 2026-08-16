@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the single directory the share flow writes its temporary pack into.
+     Exposing anything wider would hand every app that receives a share URI a
+     window into the app's private storage. -->
+<paths>
+    <cache-path
+        name="shared-packs"
+        path="shared/" />
+</paths>

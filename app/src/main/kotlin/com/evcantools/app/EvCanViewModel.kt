@@ -1,22 +1,32 @@
 package com.evcantools.app
 
 import android.app.Application
+import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.evcantools.app.ble.ConnectionState
 import com.evcantools.app.ble.EvCanBleClient
 import com.evcantools.app.data.ButtonStore
 import com.evcantools.app.data.CanButton
+import com.evcantools.app.data.ImportMode
+import com.evcantools.app.data.ImportResult
+import com.evcantools.app.data.encodeButtonPack
+import com.evcantools.app.data.exportFileName
+import com.evcantools.app.data.importButtonPack
 import com.evcantools.protocol.BleCommands
 import com.evcantools.protocol.StatusReply
 import com.evcantools.protocol.buildSendCommand
 import com.evcantools.protocol.parseAck
 import com.evcantools.protocol.parsePing
 import com.evcantools.protocol.parseStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
 
 data class UiState(
@@ -30,7 +40,12 @@ data class UiState(
     /** Id of the button currently being sent, for per-tile feedback. */
     val sendingButtonId: String? = null,
     val editing: Boolean = false,
+    /** A read, valid pack waiting for the user to choose how to merge it. */
+    val pendingImport: PendingImport? = null,
 )
+
+/** @param buttonCount how many buttons the file holds, shown in the merge prompt. */
+data class PendingImport(val text: String, val buttonCount: Int)
 
 class EvCanViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -143,6 +158,99 @@ class EvCanViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A blank button with a fresh id, for the "add" flow. */
     fun newButton(): CanButton = CanButton(id = UUID.randomUUID().toString(), label = "")
+
+    // ---- import / export -------------------------------------------------
+
+    /** Name to offer in the system "save as" sheet. */
+    fun suggestedExportFileName(): String = exportFileName(buttons.value.size)
+
+    fun exportTo(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val app = getApplication<Application>()
+                    app.contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                        out.write(encodeButtonPack(buttons.value).toByteArray())
+                    } ?: error("could not open the file for writing")
+                }
+                _ui.value = _ui.value.copy(notice = "Exported ${buttons.value.size} button(s)", message = null)
+            } catch (e: Exception) {
+                _ui.value = _ui.value.copy(message = "Export failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Write the pack to a cache file and hand back a shareable URI. Returns null
+     * on failure, having already set the error message.
+     */
+    fun preparePackToShare(): Uri? = try {
+        val app = getApplication<Application>()
+        val dir = File(app.cacheDir, "shared").apply { mkdirs() }
+        // One fixed name, overwritten each time: these are throwaway copies and
+        // accumulating them would leak the user's buttons into the cache.
+        val file = File(dir, suggestedExportFileName())
+        dir.listFiles()?.forEach { if (it != file) it.delete() }
+        file.writeText(encodeButtonPack(buttons.value))
+        FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file)
+    } catch (e: Exception) {
+        _ui.value = _ui.value.copy(message = "Could not prepare the pack: ${e.message}")
+        null
+    }
+
+    /** Read [uri] and remember it until the user picks a merge mode. */
+    fun stageImport(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val text = withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openInputStream(uri)
+                        ?.bufferedReader()?.use { it.readText() }
+                        ?: error("could not open the file")
+                }
+                // Parse now, before asking anything: no point offering a choice
+                // between two ways of applying a file that cannot be read.
+                when (val probe = importButtonPack(text, buttons.value, ImportMode.ADD)) {
+                    is ImportResult.Failed ->
+                        _ui.value = _ui.value.copy(message = probe.message, pendingImport = null)
+                    is ImportResult.Ok ->
+                        _ui.value = _ui.value.copy(
+                            pendingImport = PendingImport(text, probe.imported),
+                            message = null,
+                        )
+                }
+            } catch (e: Exception) {
+                _ui.value = _ui.value.copy(message = "Import failed: ${e.message}")
+            }
+        }
+    }
+
+    fun cancelImport() {
+        _ui.value = _ui.value.copy(pendingImport = null)
+    }
+
+    fun applyImport(mode: ImportMode) {
+        val pending = _ui.value.pendingImport ?: return
+        viewModelScope.launch {
+            when (val result = importButtonPack(pending.text, buttons.value, mode)) {
+                is ImportResult.Failed ->
+                    _ui.value = _ui.value.copy(message = result.message, pendingImport = null)
+
+                is ImportResult.Ok -> {
+                    store.replaceAll(result.buttons)
+                    val warning = if (result.invalidFrames > 0) {
+                        " — ${result.invalidFrames} of them have frames this app cannot send, edit them before use"
+                    } else {
+                        ""
+                    }
+                    _ui.value = _ui.value.copy(
+                        pendingImport = null,
+                        notice = "Imported ${result.imported} button(s)$warning",
+                        message = null,
+                    )
+                }
+            }
+        }
+    }
 
     fun clearMessages() {
         _ui.value = _ui.value.copy(message = null, notice = null)

@@ -75,6 +75,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // The import/merge rules are pure Kotlin, so they run as plain JVM tests --
+    // no emulator, no Robolectric.
+    testOptions {
+        unitTests.all { it.useJUnitPlatform() }
+    }
 }
 
 kotlin {
@@ -100,4 +106,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

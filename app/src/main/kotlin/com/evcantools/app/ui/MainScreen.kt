@@ -114,6 +114,12 @@ fun MainScreen(vm: EvCanViewModel, modifier: Modifier = Modifier) {
             onAdd = { editorTarget = vm.newButton() },
         )
 
+        // Only in edit mode: managing packs is a housekeeping task, and the grid
+        // should stay uncluttered when the app is being used to send frames.
+        if (ui.editing) {
+            ButtonPackBar(vm = vm, hasButtons = buttons.isNotEmpty())
+        }
+
         if (conn is ConnectionState.Ready) {
             DeviceCard(
                 status = ui.status,
@@ -136,6 +142,15 @@ fun MainScreen(vm: EvCanViewModel, modifier: Modifier = Modifier) {
         }
         ui.notice?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+
+    ui.pendingImport?.let { pending ->
+        ImportModeDialog(
+            pending = pending,
+            currentCount = buttons.size,
+            onApply = vm::applyImport,
+            onDismiss = vm::cancelImport,
+        )
     }
 
     editorTarget?.let { target ->
