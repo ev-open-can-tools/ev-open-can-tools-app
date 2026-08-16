@@ -12,6 +12,10 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.2.0-beta.5] - 2026-08-16
+
 ### Added
 
 - **P4 — settings screen.** Mirrors the web dashboard's configuration block: hardware, speed profile (automatic or manual), the injection master switch, autopilot gate, summon-only, nag suppression, HW3 offset slew, and plugin replay count.
@@ -19,6 +23,10 @@ are strictly additive, so an older APK keeps working against newer firmware.
 - Live counters: CAN frames, age of the last frame, TX ok/failed, free heap, uptime (firmware `stats` command).
 - Each control writes a single key and displays whatever the device echoes back. The firmware validates once, for both transports, and may refuse — Nag Mode C is blocked on HW4 — so a rejected change snaps the control back to what the device actually holds instead of showing a value that was never applied.
 - The app also derives its selectable ranges from the hardware, so it does not offer choices the device would reject: five speed profiles on HW4 against three elsewhere, and no Nag Mode C on HW4.
+
+### Requires
+
+- Firmware with the `config` and `stats` commands (ev-open-can-tools `dev`, after `4.0.0-beta.2`). Against older firmware the settings screen reports that the configuration could not be loaded.
 
 ## [0.2.0-beta.4] - 2026-08-16
 
@@ -98,7 +106,8 @@ First release that can actually control the device rather than only read from it
 - Two-module split: `:protocol` is plain Kotlin/JVM (framing, paging, reply types) and unit-testable without an Android SDK; `:app` is Compose/Material 3. The build configures `:protocol` alone when no SDK is present.
 - GitHub Actions CI: protocol tests plus a debug APK uploaded as an artifact.
 
-[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.4...HEAD
+[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.5...HEAD
+[0.2.0-beta.5]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.5
 [0.2.0-beta.4]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.4
 [0.2.0-beta.3]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.3
 [0.2.0-beta.1]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.1
