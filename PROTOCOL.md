@@ -73,6 +73,7 @@ working against newer firmware.
 | `{"cmd":"status"}`       | `{"ok":true,"dev":…,"ble":…,"hw":0\|1\|2,"inject":…,"injectActive":…,"uptimeS":…}` |
 | `{"cmd":"ping"}`         | `{"ok":true,"pong":true}`                         |
 | `{"cmd":"send",…}`       | `{"ok":true,"sent":N}` — see below                |
+| `{"cmd":"inject","args":{"on":true}}` | `{"ok":true,"inject":true}` — master injection switch |
 | `{"cmd":"wifi_mode"}`    | `{"ok":true,"reboot":true}` (device reboots to WiFi) |
 | `{"cmd":"next"}`         | (paging cursor advance; no distinct reply)        |
 | unknown                  | `{"ok":false,"error":"unknown cmd"}`              |
@@ -111,6 +112,20 @@ Rejections carry a `reason`, and frame errors carry the offending `index`:
 
 **A `gated` reply is normal, not an app failure** — it means the firmware refused
 to inject in the car's current state. Show it to the user verbatim.
+
+### `inject` — the master injection switch
+
+```json
+{"cmd":"inject","args":{"on":true}}  ->  {"ok":true,"inject":true}
+```
+
+Mirrors the dashboard's injection toggle (`dashSetCanActive`), persisted to NVS.
+It exists because the dashboard is unreachable while the device is in BLE mode,
+which left `gated / injection disabled` — the most common rejection by far — as a
+dead end for the app. `on` must be a real boolean; anything else is rejected.
+
+Turning it on does not guarantee the next `send` succeeds: the other gates
+(warm-up, AP, summon-only) still apply, so re-read `status` rather than assuming.
 
 ## Planned additive commands
 

@@ -76,6 +76,22 @@ class EvCanViewModel(app: Application) : AndroidViewModel(app) {
         _ui.value = _ui.value.copy(lastPongOk = parsePing(reply).pong)
     }
 
+    /**
+     * Flip the device's master injection switch. Offered in the app because the
+     * dashboard that also offers it is unreachable in BLE mode — without this,
+     * "gated — injection disabled" would be a dead end.
+     */
+    fun setInjection(on: Boolean) = run("Switching injection ${if (on) "on" else "off"}") {
+        val ack = parseAck(client.request(BleCommands.setInjection(on)))
+        if (ack.ok) {
+            // Re-read rather than trusting the echo: the other gates may still be
+            // closed, and the status card should show the real state.
+            _ui.value = _ui.value.copy(status = parseStatus(client.request(BleCommands.STATUS)))
+        } else {
+            _ui.value = _ui.value.copy(message = "Injection switch rejected: ${ack.failureText}")
+        }
+    }
+
     fun switchToWifi() = run("Switching to WiFi") {
         val ack = parseAck(client.request(BleCommands.WIFI_MODE))
         _ui.value = _ui.value.copy(

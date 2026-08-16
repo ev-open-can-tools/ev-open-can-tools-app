@@ -54,6 +54,13 @@ object BleCommands {
     const val PING = "{\"cmd\":\"ping\"}"
     const val WIFI_MODE = "{\"cmd\":\"wifi_mode\"}"
     const val NEXT = "{\"cmd\":\"next\"}"
+
+    /**
+     * Flip the device's master injection switch. Without this the app cannot
+     * clear its own most common rejection ("gated — injection disabled"), since
+     * the web dashboard that also offers it is unreachable while in BLE mode.
+     */
+    fun setInjection(on: Boolean) = "{\"cmd\":\"inject\",\"args\":{\"on\":$on}}"
 }
 
 /** Frame a command payload for the Command characteristic (append newline, UTF-8). */

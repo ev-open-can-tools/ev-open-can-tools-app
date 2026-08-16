@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -122,6 +123,7 @@ fun MainScreen(vm: EvCanViewModel, modifier: Modifier = Modifier) {
                 onToggle = { deviceCardOpen = !deviceCardOpen },
                 onRefresh = vm::refreshStatus,
                 onPing = vm::ping,
+                onSetInjection = vm::setInjection,
                 onSwitchToWifi = vm::switchToWifi,
             )
         }
@@ -304,6 +306,7 @@ private fun DeviceCard(
     onToggle: () -> Unit,
     onRefresh: () -> Unit,
     onPing: () -> Unit,
+    onSetInjection: (Boolean) -> Unit,
     onSwitchToWifi: () -> Unit,
 ) {
     Card {
@@ -316,14 +319,23 @@ private fun DeviceCard(
                 Text("Device", style = MaterialTheme.typography.titleMedium)
                 TextButton(onClick = onToggle) { Text(if (expanded) "Hide" else "Show") }
             }
-            // The injection gate is the usual reason a button does nothing, so it
-            // stays visible even when the detail list is collapsed.
+            // The master injection switch stays visible even when the details are
+            // collapsed: "gated — injection disabled" is by far the most common
+            // reason a button does nothing, and this is the only way to clear it
+            // while the device is in BLE mode.
             status?.let {
-                Text(
-                    "Injection ${if (it.injectActive) "active" else "idle"} · " +
-                        "CAN ${if (it.inject) "on" else "off"} · ${it.hardwareLabel}",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Injection ${if (it.injectActive) "active" else if (it.inject) "gated" else "off"}" +
+                            " · ${it.hardwareLabel}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Switch(checked = it.inject, onCheckedChange = onSetInjection, enabled = !busy)
+                }
             }
             if (expanded) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))

@@ -54,6 +54,8 @@ data class Ack(
     val ok: Boolean = false,
     val reboot: Boolean = false,
     val sent: Int? = null,
+    /** Injection state after an `inject` command. */
+    val inject: Boolean? = null,
     val error: String? = null,
     val reason: String? = null,
     val index: Int? = null,

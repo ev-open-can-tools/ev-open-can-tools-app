@@ -113,6 +113,21 @@ class SendCommandTest {
     }
 
     @Test
+    fun injectCommandEncodesABareBoolean() {
+        // The firmware requires a real boolean; "true" as a string is rejected.
+        assertEquals("{\"cmd\":\"inject\",\"args\":{\"on\":true}}", BleCommands.setInjection(true))
+        assertEquals("{\"cmd\":\"inject\",\"args\":{\"on\":false}}", BleCommands.setInjection(false))
+    }
+
+    @Test
+    fun injectReplyCarriesResultingState() {
+        val ack = parseAck("{\"ok\":true,\"inject\":true}")
+        assertTrue(ack.ok)
+        assertEquals(true, ack.inject)
+        assertNull(ack.failureText)
+    }
+
+    @Test
     fun partialBurstReportsHowManyMadeIt() {
         val ack = parseAck("{\"ok\":false,\"sent\":1,\"error\":\"tx failed\"}")
         assertEquals(1, ack.sent)
