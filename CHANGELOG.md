@@ -24,6 +24,11 @@ No unreleased changes.
 - Buttons whose frames the app cannot send are imported rather than dropped: they show as invalid on the grid and can be repaired, and the import reports how many there were.
 - `:app` now has JVM unit tests (the pack rules are pure Kotlin), wired into CI.
 
+### Verified
+
+- 13 JVM unit tests for the pack rules, plus CI (protocol tests, app tests, debug APK).
+- On device: export, re-import as *add* (buttons duplicated rather than overwritten), share via the system sheet, and rejection of a file that is not a pack.
+
 ### Removed
 
 - The release runbook is no longer carried in the repository; it is kept locally instead. It held no secrets — only the public certificate fingerprint and the procedure — so this is a scope decision, not a leak. The fingerprint needed to check a downloaded APK now lives in the README.
