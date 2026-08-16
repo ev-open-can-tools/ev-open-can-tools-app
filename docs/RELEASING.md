@@ -20,12 +20,16 @@ registered in the Android Developer Console:
 If the APK's package name and signing key are not both registered, it is not
 covered, and certified devices will refuse it once enforcement reaches them.
 
-Record the fingerprint you actually ship with here once it is registered, so a
-published APK can be checked against something written down:
+The fingerprint that releases are signed with, so a published APK can be checked
+against something written down:
 
-| Key | SHA-256 | Registered |
-|---|---|---|
-| _(fill in after step 1)_ | | |
+| Key | SHA-256 |
+|---|---|
+| `evcan-release` (created 2026-08-16, RSA 4096, valid 10000 days) | `26:FC:83:7C:A9:DA:70:3A:F7:DD:4B:8F:32:E7:77:80:4A:1D:C6:00:20:70:5E:FC:58:86:67:5B:7E:E4:9C:AD` |
+
+Only the fingerprint is written down — it is public information, printed by
+`apksigner` out of every APK. The keystore and its password are not in this
+repository and must not be.
 
 > The Kotlin/R namespace is still `com.evcantools.app`. That is deliberate — only
 > the `applicationId` is the app's identity; renaming every source package would
