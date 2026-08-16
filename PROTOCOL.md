@@ -74,6 +74,8 @@ working against newer firmware.
 | `{"cmd":"ping"}`         | `{"ok":true,"pong":true}`                         |
 | `{"cmd":"send",…}`       | `{"ok":true,"sent":N}` — see below                |
 | `{"cmd":"inject","args":{"on":true}}` | `{"ok":true,"inject":true}` — master injection switch |
+| `{"cmd":"config"}` / `{"cmd":"config","args":{…}}` | `{"ok":true,"config":{…}}` — read or write settings |
+| `{"cmd":"stats"}`        | `{"ok":true,"canFrames":…,"parked":…,…}` — live counters + vehicle state |
 | `{"cmd":"wifi_mode"}`    | `{"ok":true,"reboot":true}` (device reboots to WiFi) |
 | `{"cmd":"next"}`         | (paging cursor advance; no distinct reply)        |
 | unknown                  | `{"ok":false,"error":"unknown cmd"}`              |
@@ -127,9 +129,53 @@ dead end for the app. `on` must be a real boolean; anything else is rejected.
 Turning it on does not guarantee the next `send` succeeds: the other gates
 (warm-up, AP, summon-only) still apply, so re-read `status` rather than assuming.
 
+### `config` — read and write the dashboard settings
+
+Without `args` it reads. With `args` it applies **only the keys present** and
+echoes the stored state back, so a settings screen can send one field per toggle
+instead of rewriting everything.
+
+```json
+{"cmd":"config","args":{"apg":false}}  ->  {"ok":true,"config":{ …full config… }}
+```
+
+| Key | Meaning |
+|---|---|
+| `hw` | 0 Legacy, 1 HW3, 2 HW4 |
+| `sp` / `spa` | speed profile / pick it automatically |
+| `can` | master injection switch (same one `inject` flips) |
+| `apg` | autopilot gate |
+| `smo` | summon-only injection |
+| `nag` | nag suppression mode |
+| `plgr` | plugin replay count |
+| `hw3OffsetSlew` / `hw3SlewRate` | HW3 offset ramping |
+
+Booleans go on the wire as real JSON booleans; the firmware renders them into
+the `"1"`/`"0"` its validators accept.
+
+**The device is the authority.** `ctrlApplyConfig` in the firmware is the single
+implementation, shared with the dashboard's `POST /config` — the validation
+cannot drift between the two transports. It clamps, and it refuses outright:
+
+```json
+{"ok":false,"error":"Nag Mode C is blocked on HW4 after reported control faults"}
+```
+
+Take the echoed `config` as the new truth rather than assuming a write applied.
+
+### `stats` — live counters and vehicle state
+
+```json
+{"cmd":"stats"}
+```
+
+Returns `uptimeS`, `canFrames`, `canAgeMs`, `txOk`, `txFail`, `freeHeap`, plus
+the state the injection gates key off: `gateEnabled`, `gateAllowed`, `apActive`,
+`parked`, `summoning`, `gateReason`. Kept separate from `status` so the
+frequently polled reply stays small.
+
 ## Planned additive commands
 
-- **P4 — config get/set + car stats**: mirror the web dashboard's configuration
-  routes for the app's settings page. Needs the shared command core in the
-  firmware first (`ctrlBuildStatusJson` / `ctrlApplyConfig` / `ctrlDispatch`), so
-  HTTP and BLE do not drift apart.
+- WiFi configuration, plugin management and OTA remain dashboard-only. Plugin
+  upload would mean large payloads over a 255-byte-per-write channel, and pushing
+  firmware images over BLE is its own project.

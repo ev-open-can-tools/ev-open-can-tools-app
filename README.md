@@ -97,9 +97,9 @@ exported from this same phone — can never overwrite a button you already had.
 
 - **P0** — foundation: BLE connect/pair + paged transport + status/ping *(done)*
 - **P1** — custom-command **button grid** (tap = send stored CAN frame(s)) + edit mode *(done)*
-- **P2** — import / export / share function packs (backup, new device) *(current)*
+- **P2** — import / export / share function packs (backup, new device) *(done)*
 - **P3** — custom icons/images + themes
-- **P4** — settings page mirroring the web config + car stats
+- **P4** — settings page mirroring the web config + car stats *(current)*
 
 App state (buttons, icons, codes) is stored **on the phone**; the device stores
 none of it. Firmware changes are strictly additive to the existing dev branch.

@@ -12,7 +12,13 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+
+- **P4 — settings screen.** Mirrors the web dashboard's configuration block: hardware, speed profile (automatic or manual), the injection master switch, autopilot gate, summon-only, nag suppression, HW3 offset slew, and plugin replay count.
+- A vehicle panel showing the state the injection gates key off — parked, autopilot active, summoning — plus the device's own wording for why injection is blocked. That is the answer to "why did my button do nothing", which previously required reading the dashboard.
+- Live counters: CAN frames, age of the last frame, TX ok/failed, free heap, uptime (firmware `stats` command).
+- Each control writes a single key and displays whatever the device echoes back. The firmware validates once, for both transports, and may refuse — Nag Mode C is blocked on HW4 — so a rejected change snaps the control back to what the device actually holds instead of showing a value that was never applied.
+- The app also derives its selectable ranges from the hardware, so it does not offer choices the device would reject: five speed profiles on HW4 against three elsewhere, and no Nag Mode C on HW4.
 
 ## [0.2.0-beta.4] - 2026-08-16
 

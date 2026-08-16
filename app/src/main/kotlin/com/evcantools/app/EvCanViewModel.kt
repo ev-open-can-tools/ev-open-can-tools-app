@@ -15,10 +15,18 @@ import com.evcantools.app.data.encodeButtonPack
 import com.evcantools.app.data.exportFileName
 import com.evcantools.app.data.importButtonPack
 import com.evcantools.protocol.BleCommands
+import com.evcantools.protocol.ConfigKey
+import com.evcantools.protocol.DeviceConfig
+import com.evcantools.protocol.READ_CONFIG_COMMAND
+import com.evcantools.protocol.STATS_COMMAND
+import com.evcantools.protocol.StatsReply
 import com.evcantools.protocol.StatusReply
+import com.evcantools.protocol.buildConfigCommand
 import com.evcantools.protocol.buildSendCommand
 import com.evcantools.protocol.parseAck
+import com.evcantools.protocol.parseConfig
 import com.evcantools.protocol.parsePing
+import com.evcantools.protocol.parseStats
 import com.evcantools.protocol.parseStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +50,9 @@ data class UiState(
     val editing: Boolean = false,
     /** A read, valid pack waiting for the user to choose how to merge it. */
     val pendingImport: PendingImport? = null,
+    val config: DeviceConfig? = null,
+    val stats: StatsReply? = null,
+    val showSettings: Boolean = false,
 )
 
 /** @param buttonCount how many buttons the file holds, shown in the merge prompt. */
@@ -104,6 +115,44 @@ class EvCanViewModel(app: Application) : AndroidViewModel(app) {
             _ui.value = _ui.value.copy(status = parseStatus(client.request(BleCommands.STATUS)))
         } else {
             _ui.value = _ui.value.copy(message = "Injection switch rejected: ${ack.failureText}")
+        }
+    }
+
+    // ---- settings --------------------------------------------------------
+
+    fun openSettings() {
+        _ui.value = _ui.value.copy(showSettings = true)
+        loadSettings()
+    }
+
+    fun closeSettings() {
+        _ui.value = _ui.value.copy(showSettings = false)
+    }
+
+    fun loadSettings() = run("Reading settings") {
+        val config = parseConfig(client.request(READ_CONFIG_COMMAND))
+        val stats = parseStats(client.request(STATS_COMMAND))
+        _ui.value = _ui.value.copy(config = config.config ?: _ui.value.config, stats = stats)
+    }
+
+    /**
+     * Write one setting. The device validates, clamps and may refuse — Nag Mode
+     * C is blocked on HW4, the speed profile range depends on the hardware — and
+     * echoes back what it stored, so the reply is taken as the new truth rather
+     * than assuming the request went through as sent.
+     */
+    fun setConfig(key: ConfigKey, value: Any) = run("Changing ${key.wire}") {
+        val reply = parseConfig(client.request(buildConfigCommand(mapOf(key to value))))
+        if (reply.ok && reply.config != null) {
+            _ui.value = _ui.value.copy(config = reply.config, message = null)
+        } else {
+            // Re-read, so the UI snaps back to what the device actually holds
+            // instead of showing a control the device rejected.
+            val current = parseConfig(client.request(READ_CONFIG_COMMAND))
+            _ui.value = _ui.value.copy(
+                config = current.config ?: _ui.value.config,
+                message = reply.error ?: "Device rejected the change",
+            )
         }
     }
 

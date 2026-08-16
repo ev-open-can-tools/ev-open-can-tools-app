@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,6 +55,19 @@ fun MainScreen(vm: EvCanViewModel, modifier: Modifier = Modifier) {
     val ui by vm.ui.collectAsState()
     val buttons by vm.buttons.collectAsState()
 
+    if (ui.showSettings) {
+        SettingsScreen(
+            config = ui.config,
+            stats = ui.stats,
+            busy = ui.busy,
+            onSet = vm::setConfig,
+            onRefresh = vm::loadSettings,
+            onBack = vm::closeSettings,
+            modifier = modifier,
+        )
+        return
+    }
+
     var editorTarget by remember { mutableStateOf<CanButton?>(null) }
     var deviceCardOpen by remember { mutableStateOf(false) }
 
@@ -84,6 +98,11 @@ fun MainScreen(vm: EvCanViewModel, modifier: Modifier = Modifier) {
         ) {
             Text("EV CAN Tools", style = MaterialTheme.typography.headlineMedium)
             Row {
+                if (conn is ConnectionState.Ready) {
+                    IconButton(onClick = vm::openSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
                 if (ui.editing) {
                     IconButton(onClick = { editorTarget = vm.newButton() }) {
                         Icon(Icons.Default.Add, contentDescription = "Add button")
