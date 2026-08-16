@@ -70,7 +70,17 @@ The app is **not** on the Play Store. It is signed with a key registered for
 Android developer verification against `org.ev_open_can_tools.ev_can_app`, which
 is what keeps it installable on certified devices once Google's verification
 requirement takes effect (30 September 2026 in the first countries, global from
-2027). See [docs/RELEASING.md](docs/RELEASING.md).
+2027).
+
+Check any APK you downloaded before installing it:
+
+```bash
+sha256sum -c ev-can-tools-<version>.apk.sha256
+apksigner verify --print-certs ev-can-tools-<version>.apk
+```
+
+The certificate SHA-256 must be
+`26fc837ca9da703af7dd4b8f32e777804a1dc60020705efc5886675b7ee49cad`.
 
 ## Roadmap
 

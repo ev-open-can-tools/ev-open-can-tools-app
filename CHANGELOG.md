@@ -12,7 +12,9 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Removed
+
+- The release runbook is no longer carried in the repository; it is kept locally instead. It held no secrets — only the public certificate fingerprint and the procedure — so this is a scope decision, not a leak. The fingerprint needed to check a downloaded APK now lives in the README.
 
 ## [0.2.0-beta.3] - 2026-08-16
 
@@ -23,7 +25,7 @@ No unreleased changes.
 ### Added
 
 - Release pipeline (`.github/workflows/release.yml`): pushing a `v*` tag builds a release-signed APK, prints its package name and certificate fingerprint into the job summary, and publishes the APK plus a `.sha256` as a GitHub Release. Beta tags are marked pre-release. The workflow fails and publishes nothing if the signing secrets are absent, because a debug-signed APK would not match the registration.
-- [docs/RELEASING.md](docs/RELEASING.md): the verification requirement, why the committed debug keystore must never become the release key, keystore setup, and how to check a published APK.
+- A release runbook covering the verification requirement, why the committed debug keystore must never become the release key, keystore setup, and how to check a published APK. Kept outside the repository.
 
 ### Requires
 

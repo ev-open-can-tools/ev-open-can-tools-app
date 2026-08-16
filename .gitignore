@@ -28,3 +28,7 @@ keystore.properties
 !app/debug.keystore
 *.jks
 keystore.properties
+
+# Release runbook: kept locally, not in the repo (contains no secrets, but the
+# release procedure is not something this repository needs to carry).
+docs/RELEASING.md
