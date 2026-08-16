@@ -60,6 +60,18 @@ bus in the car's current state, not a bug in the app.
 Buttons are stored in `buttons.json` in the app's private storage — the device
 holds none of it, which is what makes them exportable in P2.
 
+## Install
+
+Releases are published as sideloadable APKs under
+[Releases](https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases),
+each with a `.sha256` next to it — verify before installing.
+
+The app is **not** on the Play Store. It is signed with a key registered for
+Android developer verification against `org.ev_open_can_tools.ev_can_app`, which
+is what keeps it installable on certified devices once Google's verification
+requirement takes effect (30 September 2026 in the first countries, global from
+2027). See [docs/RELEASING.md](docs/RELEASING.md).
+
 ## Roadmap
 
 - **P0** — foundation: BLE connect/pair + paged transport + status/ping *(done)*

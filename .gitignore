@@ -21,3 +21,10 @@ keystore.properties
 
 # OS
 .DS_Store
+
+# Release signing material — never committed. Whoever holds this key can publish
+# as this verified developer.
+*.keystore
+!app/debug.keystore
+*.jks
+keystore.properties

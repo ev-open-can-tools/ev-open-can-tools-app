@@ -8,11 +8,17 @@ plugins {
 }
 
 android {
+    // The Kotlin/R namespace stays as-is: only the applicationId is the app's
+    // identity towards Google and the device, and moving every source file would
+    // be churn for no gain.
     namespace = "com.evcantools.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.evcantools.app"
+        // Must match the package name registered for Android developer
+        // verification, together with the release signing key's SHA-256.
+        // A mismatch in either means the APK is not covered by the registration.
+        applicationId = "org.ev_open_can_tools.ev_can_app"
         minSdk = 26
         targetSdk = 35
         versionCode = 3
@@ -30,6 +36,20 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+
+        // Release identity. Never committed: this key, together with the
+        // applicationId, is what Google's developer verification is registered
+        // against, so whoever holds it can publish as this developer. CI writes
+        // it from secrets; locally it is absent and release builds stay unsigned.
+        create("release") {
+            val storePath = System.getenv("EVCAN_KEYSTORE")
+            if (storePath != null && file(storePath).exists()) {
+                storeFile = file(storePath)
+                storePassword = System.getenv("EVCAN_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("EVCAN_KEY_ALIAS")
+                keyPassword = System.getenv("EVCAN_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -39,6 +59,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Only sign when the keystore is actually present, so `assembleRelease`
+            // still runs on a machine without it instead of failing the build.
+            if (System.getenv("EVCAN_KEYSTORE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

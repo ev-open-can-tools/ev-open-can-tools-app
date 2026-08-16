@@ -12,7 +12,14 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Changed
+
+- **`applicationId` is now `org.ev_open_can_tools.ev_can_app`** (was `com.evcantools.app`), matching the package name registered for Android developer verification. From 30 September 2026 Google requires every app on a certified device — sideloaded ones included — to be tied to a verified developer, and coverage depends on the applicationId and release signing key matching the registration. The Kotlin/R namespace deliberately stays `com.evcantools.app`; only the applicationId is the app's identity. **Android treats this as a different app: the previous version must be uninstalled, and stored buttons do not carry over.**
+
+### Added
+
+- Release pipeline (`.github/workflows/release.yml`): pushing a `v*` tag builds a release-signed APK, prints its package name and certificate fingerprint into the job summary, and publishes the APK plus a `.sha256` as a GitHub Release. Beta tags are marked pre-release. The workflow fails and publishes nothing if the signing secrets are absent, because a debug-signed APK would not match the registration.
+- [docs/RELEASING.md](docs/RELEASING.md): the verification requirement, why the committed debug keystore must never become the release key, keystore setup, and how to check a published APK.
 
 ## [0.2.0-beta.1] - 2026-08-16
 

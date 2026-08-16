@@ -1,0 +1,119 @@
+name: Release APK
+
+# Builds a release-signed APK and publishes it as a GitHub Release, so users can
+# download it directly. The signing key must be the one registered for Android
+# developer verification against this app's applicationId — otherwise the APK is
+# not covered by the registration and certified devices will refuse it once
+# enforcement starts.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   EVCAN_KEYSTORE_BASE64   base64 of the release keystore file
+#   EVCAN_KEYSTORE_PASSWORD keystore password
+#   EVCAN_KEY_ALIAS         key alias inside the keystore
+#   EVCAN_KEY_PASSWORD      password of that key
+#
+# Encode the keystore with:  base64 -w0 release.keystore
+#
+# Trigger by pushing a tag:  git tag v0.2.0-beta.1 && git push origin v0.2.0-beta.1
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK platform + build-tools
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Protocol unit tests
+        run: ./gradlew :protocol:test --stacktrace
+
+      - name: Fail early if the signing secrets are missing
+        env:
+          KEYSTORE: ${{ secrets.EVCAN_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::error::EVCAN_KEYSTORE_BASE64 is not set. An unsigned or debug-signed"
+            echo "::error::APK would not match the registered signing key, so publishing"
+            echo "::error::one would be worse than publishing nothing."
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.EVCAN_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Assemble release APK
+        env:
+          EVCAN_KEYSTORE: ${{ runner.temp }}/release.keystore
+          EVCAN_KEYSTORE_PASSWORD: ${{ secrets.EVCAN_KEYSTORE_PASSWORD }}
+          EVCAN_KEY_ALIAS: ${{ secrets.EVCAN_KEY_ALIAS }}
+          EVCAN_KEY_PASSWORD: ${{ secrets.EVCAN_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      # Proves the published APK really carries the registered identity. If this
+      # does not match, the release is not covered by developer verification.
+      - name: Verify signature and report fingerprint
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | tee certs.txt
+          echo "### APK identity" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          "$BUILD_TOOLS/aapt2" dump packagename "$APK" >> "$GITHUB_STEP_SUMMARY"
+          grep -i 'SHA-256 digest' certs.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rename and checksum
+        id: artifact
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          NAME="ev-can-tools-${GITHUB_REF_NAME}.apk"
+          mv "$APK" "$NAME"
+          sha256sum "$NAME" > "$NAME.sha256"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.artifact.outputs.name }}
+            ${{ steps.artifact.outputs.name }}.sha256
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+          body: |
+            Install by downloading the APK below.
+
+            Verify what you downloaded before installing:
+
+            ```
+            sha256sum -c ev-can-tools-${{ github.ref_name }}.apk.sha256
+            ```
+
+            The APK is signed with the key registered for Android developer
+            verification against `org.ev_open_can_tools.ev_can_app`. Check it with:
+
+            ```
+            apksigner verify --print-certs ev-can-tools-${{ github.ref_name }}.apk
+            ```
+
+            Requires firmware `4.0.0-beta.2` or newer for the button grid to work.
