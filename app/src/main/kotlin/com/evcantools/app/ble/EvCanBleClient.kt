@@ -60,6 +60,17 @@ class EvCanBleClient(private val context: Context) : BleTransport {
     private companion object {
         const val CONNECT_TIMEOUT_MS = 15_000L
         const val PREPARE_TIMEOUT_MS = 20_000L
+
+        /**
+         * Cap on a single GATT read or write.
+         *
+         * Without one, a callback that never arrives -- a device that rebooted
+         * mid-request, a stale handle after a reconnect -- suspends the caller
+         * forever. The UI then sits at "Working…" with every control disabled and
+         * no way out but killing the app. Ten seconds is far longer than a round
+         * trip needs; it only ever fires when something is genuinely lost.
+         */
+        const val OPERATION_TIMEOUT_MS = 10_000L
     }
 
     private val adapter: BluetoothAdapter? =
@@ -239,7 +250,7 @@ class EvCanBleClient(private val context: Context) : BleTransport {
             pendingWrite = null
             error("Failed to start command write")
         }
-        deferred.await()
+        awaitOperation(deferred) { pendingWrite = null }
     }
 
     override suspend fun readResponsePage(): ByteArray = opMutex.withLock {
@@ -251,7 +262,22 @@ class EvCanBleClient(private val context: Context) : BleTransport {
             pendingRead = null
             error("Failed to start response read")
         }
-        deferred.await()
+        awaitOperation(deferred) { pendingRead = null }
+    }
+
+    /**
+     * Await one GATT callback, giving up rather than hanging. On expiry the
+     * pending slot is cleared via [onTimeout], so a callback arriving later
+     * cannot complete an operation whose caller has already moved on.
+     */
+    private suspend fun <T> awaitOperation(
+        deferred: CompletableDeferred<T>,
+        onTimeout: () -> Unit,
+    ): T = try {
+        withTimeout(OPERATION_TIMEOUT_MS) { deferred.await() }
+    } catch (e: TimeoutCancellationException) {
+        onTimeout()
+        throw RuntimeException("The device did not answer within ${OPERATION_TIMEOUT_MS / 1000}s")
     }
 
     // ---- High-level commands --------------------------------------------
@@ -347,6 +373,11 @@ class EvCanBleClient(private val context: Context) : BleTransport {
     }
 
     fun close() {
+        // Fail anything in flight first. Tearing the GATT down normally triggers
+        // the disconnect callback which would do this, but on an already-dead
+        // link that callback may never come -- and then Disconnect, the one
+        // control still enabled while the UI is stuck, would not unstick it.
+        failPending(RuntimeException("Disconnected"))
         runCatching { scanCallback?.let { adapter?.bluetoothLeScanner?.stopScan(it) } }
         runCatching { gatt?.disconnect() }
         runCatching { gatt?.close() }

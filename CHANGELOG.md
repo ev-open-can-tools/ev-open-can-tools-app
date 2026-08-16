@@ -14,6 +14,13 @@ are strictly additive, so an older APK keeps working against newer firmware.
 
 No unreleased changes.
 
+## [0.2.0-beta.6] - 2026-08-16
+
+### Fixed
+
+- **A lost GATT callback no longer freezes the app.** Reads and writes had no timeout — only connecting did — so a device that rebooted mid-request, or a stale handle after a reconnect, left the caller suspended forever. The UI then sat at "Working…" with every control disabled and no way out but force-closing it. Operations now give up after 10 seconds and report it, which is far longer than a round trip needs.
+- **Disconnect always unsticks the app.** It now fails anything in flight itself, instead of relying on the disconnect callback — which never arrives on an already-dead link, exactly when Disconnect is the one control still enabled.
+
 ## [0.2.0-beta.5] - 2026-08-16
 
 ### Added
@@ -106,7 +113,8 @@ First release that can actually control the device rather than only read from it
 - Two-module split: `:protocol` is plain Kotlin/JVM (framing, paging, reply types) and unit-testable without an Android SDK; `:app` is Compose/Material 3. The build configures `:protocol` alone when no SDK is present.
 - GitHub Actions CI: protocol tests plus a debug APK uploaded as an artifact.
 
-[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.5...HEAD
+[Unreleased]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/compare/v0.2.0-beta.6...HEAD
+[0.2.0-beta.6]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.6
 [0.2.0-beta.5]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.5
 [0.2.0-beta.4]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.4
 [0.2.0-beta.3]: https://github.com/ev-open-can-tools/ev-open-can-tools-app/releases/tag/v0.2.0-beta.3
